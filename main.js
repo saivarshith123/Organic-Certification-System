@@ -1,11 +1,35 @@
 const API_BASE_URL = 'http://localhost:5000/api';
+const contractAddress = "YOUR_CONTRACT_ADDRESS"; // Replace with your contract address
+const contractABI = []; // Replace with your contract ABI
 
 let currentUser = null;
+let provider;
+let signer;
+let contract;
+
+async function connectWallet() {
+    if (typeof window.ethereum !== 'undefined') {
+        try {
+            await window.ethereum.request({ method: 'eth_requestAccounts' });
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            signer = provider.getSigner();
+            contract = new ethers.Contract(contractAddress, contractABI, signer);
+            const userAddress = await signer.getAddress();
+            // You can now use userAddress for role checking or other purposes
+            console.log("Connected with address:", userAddress);
+        } catch (error) {
+            console.error("User rejected request");
+        }
+    } else {
+        console.error("MetaMask is not installed!");
+    }
+}
+
 
 function updateUIAfterLogin(user) {
     currentUser = user;
     sessionStorage.setItem('currentUser', JSON.stringify(user));
-    
+
     const loginSection = document.getElementById('login-section');
     const dashboardSection = document.getElementById('dashboard-section');
     if (loginSection) loginSection.classList.add('hidden');
@@ -14,7 +38,7 @@ function updateUIAfterLogin(user) {
       document.getElementById('dashboard-title').textContent = `Welcome, ${user.username} (${user.userType})`;
       document.getElementById('dashboard-content').textContent = `You are logged in as a ${user.userType}. Use the navigation links to access your dashboard.`;
     }
-    
+
     const homeLink = document.getElementById('home-link');
     const farmerLink = document.getElementById('farmer-link');
     const certifierLink = document.getElementById('certifier-link');
@@ -44,6 +68,8 @@ function updateUIAfterLogout() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    connectWallet(); // Connect to MetaMask on page load
+
     const storedUser = sessionStorage.getItem('currentUser');
     if (storedUser) {
         updateUIAfterLogin(JSON.parse(storedUser));
@@ -148,24 +174,17 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.disabled = true;
 
             try {
-                const response = await fetch(`${API_BASE_URL}/products`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: productName, batchId: batchId, owner: currentUser.username })
-                });
+                // Smart Contract Interaction
+                const tx = await contract.addProduct(productName, batchId);
+                await tx.wait(); // Wait for the transaction to be mined
 
-                if (response.ok) {
-                    const data = await response.json();
-                    statusMessage.textContent = `Product added with ID: ${data.productId}`;
-                    statusMessage.classList.add('success');
-                    farmerForm.reset();
-                } else {
-                    statusMessage.textContent = 'Error: Failed to add product. Is the backend running?';
-                    statusMessage.classList.add('error');
-                }
+                statusMessage.textContent = `Product added with transaction hash: ${tx.hash}`;
+                statusMessage.classList.add('success');
+                farmerForm.reset();
+
             } catch (error) {
                 console.error('Error:', error);
-                statusMessage.textContent = 'Error: Could not connect to the backend server.';
+                statusMessage.textContent = 'Error: Could not add product to the blockchain.';
                 statusMessage.classList.add('error');
             } finally {
                 submitBtn.disabled = false;
@@ -180,34 +199,32 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!productList) return;
             productList.innerHTML = '<p style="text-align:center;">Loading uncertified products...</p>';
             try {
-                const response = await fetch(`${API_BASE_URL}/uncertified-products`);
-                if (response.ok) {
-                    const products = await response.json();
-                    productList.innerHTML = '';
-                    if (products.length === 0) {
-                        productList.innerHTML = '<p style="text-align:center;">No products awaiting certification.</p>';
-                    } else {
-                        products.forEach(product => {
-                            const productDiv = document.createElement('div');
-                            productDiv.className = 'product-item';
-                            productDiv.innerHTML = `
-                                <div>
-                                    <h3>${product.name}</h3>
-                                    <p style="font-size:0.875rem; color:var(--color-text-dim);">ID: ${product.productId}</p>
-                                </div>
-                                <button onclick="certifyProduct('${product.productId}')"
-                                        style="background-color: var(--color-accent-blue); color:white; padding: 0.5rem 1rem; border-radius:0.5rem; cursor:pointer; border:none;">
-                                    Certify
-                                </button>
-                            `;
-                            productList.appendChild(productDiv);
-                        });
-                    }
+                // Smart Contract Interaction
+                const productIds = await contract.getUncertifiedProductIds();
+
+                productList.innerHTML = '';
+                if (productIds.length === 0) {
+                    productList.innerHTML = '<p style="text-align:center;">No products awaiting certification.</p>';
                 } else {
-                    productList.innerHTML = `<p class="status-message error">Error: Could not fetch products. Is the backend running?</p>`;
+                    for (const id of productIds) {
+                        const product = await contract.getProduct(id);
+                        const productDiv = document.createElement('div');
+                        productDiv.className = 'product-item';
+                        productDiv.innerHTML = `
+                            <div>
+                                <h3>${product.name}</h3>
+                                <p style="font-size:0.875rem; color:var(--color-text-dim);">ID: ${product.productId}</p>
+                            </div>
+                            <button onclick="certifyProduct(${product.productId})"
+                                    style="background-color: var(--color-accent-blue); color:white; padding: 0.5rem 1rem; border-radius:0.5rem; cursor:pointer; border:none;">
+                                Certify
+                            </button>
+                        `;
+                        productList.appendChild(productDiv);
+                    }
                 }
             } catch (error) {
-                productList.innerHTML = `<p class="status-message error">Error: Could not connect to the backend server.</p>`;
+                productList.innerHTML = `<p class="status-message error">Error: Could not fetch products from the blockchain.</p>`;
             }
         }
         fetchUncertifiedProducts(); // Initial fetch
@@ -218,23 +235,16 @@ document.addEventListener('DOMContentLoaded', () => {
         certifierStatus.textContent = 'Certifying product...';
         certifierStatus.className = 'status-message';
         try {
-            const response = await fetch(`${API_BASE_URL}/certify`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ productId: productId, certifier: currentUser.username })
-            });
+            // Smart Contract Interaction
+            const tx = await contract.certifyProduct(productId);
+            await tx.wait();
 
-            if (response.ok) {
-                certifierStatus.textContent = `Product ${productId} successfully certified!`;
-                certifierStatus.classList.add('success');
-                document.getElementById('uncertified-list').innerHTML = '<p style="text-align:center;">Refreshing list...</p>';
-                await fetchUncertifiedProducts();
-            } else {
-                certifierStatus.textContent = 'Error: Certification failed. Is the backend running?';
-                certifierStatus.classList.add('error');
-            }
+            certifierStatus.textContent = `Product ${productId} successfully certified!`;
+            certifierStatus.classList.add('success');
+            document.getElementById('uncertified-list').innerHTML = '<p style="text-align:center;">Refreshing list...</p>';
+            await fetchUncertifiedProducts();
         } catch (error) {
-            certifierStatus.textContent = 'Error: Could not connect to the backend server.';
+            certifierStatus.textContent = 'Error: Certification failed.';
             certifierStatus.classList.add('error');
         }
     };
@@ -255,33 +265,26 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.disabled = true;
 
             try {
-                const response = await fetch(`${API_BASE_URL}/products/${productId}`);
-                if (response.ok) {
-                    const product = await response.json();
-                    consumerStatus.textContent = 'Product found!';
-                    consumerStatus.classList.add('success');
-                    productDetails.innerHTML = `
-                        <h3 style="font-size:1.125rem; font-weight:600; margin-bottom:1rem;">Product Details</h3>
-                        <p><strong>Product ID:</strong> ${product.productId}</p>
-                        <p><strong>Name:</strong> ${product.name}</p>
-                        <p><strong>Farmer:</strong> ${product.farmerId}</p>
-                        <p><strong>Status:</strong> <span style="font-weight:600; color:var(--color-accent-blue);">${product.status}</span></p>
-                        <h4 style="font-weight:600; margin-top:1rem;">Certification History:</h4>
-                        <ul style="list-style-type:disc; margin-left:1.5rem; margin-top:0.5rem;">
-                            ${product.certifications ? product.certifications.map(cert => `
-                                <li>Certified by ${cert.certifierName} on ${new Date(cert.timestamp).toLocaleDateString()}</li>
-                            `).join('') : '<li>No certification history found.</li>'}
-                        </ul>
-                    `;
-                    productDetails.classList.remove('hidden');
-                } else {
-                    consumerStatus.textContent = 'Error: Product not found.';
-                    consumerStatus.classList.add('error');
-                    productDetails.classList.add('hidden');
-                }
+                // Smart Contract Interaction
+                const product = await contract.getProduct(productId);
+
+                consumerStatus.textContent = 'Product found!';
+                consumerStatus.classList.add('success');
+                productDetails.innerHTML = `
+                    <h3 style="font-size:1.125rem; font-weight:600; margin-bottom:1rem;">Product Details</h3>
+                    <p><strong>Product ID:</strong> ${product.productId}</p>
+                    <p><strong>Name:</strong> ${product.name}</p>
+                    <p><strong>Farmer:</strong> ${product.owner}</p>
+                    <p><strong>Status:</strong> <span style="font-weight:600; color:var(--color-accent-blue);">${product.status === 0 ? 'Uncertified' : 'Certified'}</span></p>
+                    <h4 style="font-weight:600; margin-top:1rem;">Certification History:</h4>
+                    <p>Certified by ${product.certifier} on ${new Date(product.certificationTimestamp * 1000).toLocaleDateString()}</p>
+                `;
+                productDetails.classList.remove('hidden');
+
             } catch (error) {
-                consumerStatus.textContent = 'Error: Could not connect to the backend server.';
+                consumerStatus.textContent = 'Error: Product not found.';
                 consumerStatus.classList.add('error');
+                productDetails.classList.add('hidden');
             } finally {
                 submitBtn.disabled = false;
             }
