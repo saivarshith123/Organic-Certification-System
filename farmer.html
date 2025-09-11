@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farmer Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">Organic Certs</div>
+            <nav>
+                <a href="index.html">Home</a>
+                <a href="farmer.html" class="active">Farmer</a>
+                <a href="certifier.html">Certifier</a>
+                <a href="consumer.html">Consumer</a>
+            </nav>
+        </header>
+
+        <main>
+            <section id="farmer-dashboard" class="page-section active">
+                <h2>Farm-to-Table Submission</h2>
+                <form id="farmer-form">
+                    <label for="product-name">Product Name</label>
+                    <input type="text" id="product-name" required>
+                    <label for="batch-id">Batch ID</label>
+                    <input type="text" id="batch-id" required>
+                    <button type="submit" id="farmer-submit-btn">Add Product to Blockchain</button>
+                </form>
+                <p id="farmer-status" class="status-message"></p>
+            </section>
+        </main>
+    </div>
+    
+    <script src="main.js"></script>
+</body>
+</html>

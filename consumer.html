@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consumer View</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">Organic Certs</div>
+            <nav>
+                <a href="index.html">Home</a>
+                <a href="farmer.html">Farmer</a>
+                <a href="certifier.html">Certifier</a>
+                <a href="consumer.html" class="active">Consumer</a>
+            </nav>
+        </header>
+
+        <main>
+            <section id="consumer-view" class="page-section active">
+                <h2>Verify Product Authenticity</h2>
+                <form id="consumer-form">
+                    <label for="search-product-id">Enter Product ID</label>
+                    <input type="text" id="search-product-id" required>
+                    <button type="submit" id="consumer-submit-btn">Verify Product</button>
+                </form>
+                <div id="product-details" class="list-container hidden"></div>
+                <p id="consumer-status" class="status-message"></p>
+            </section>
+        </main>
+    </div>
+    
+    <script src="main.js"></script>
+</body>
+</html>

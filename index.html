@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organic Certification System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">Organic Certs</div>
+            <nav>
+                <a href="index.html" id="home-link" class="active">Home</a>
+                <a href="farmer.html" id="farmer-link" class="hidden">Farmer</a>
+                <a href="certifier.html" id="certifier-link" class="hidden">Certifier</a>
+                <a href="consumer.html" id="consumer-link" class="hidden">Consumer</a>
+                <a href="index.html" id="logout-link" class="hidden">Logout</a>
+            </nav>
+        </header>
+
+        <main>
+            <section id="login-section" class="page-section active">
+                <h2 id="welcome-message">Welcome to the Blockchain</h2>
+                <form id="login-form">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" required>
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required>
+                    <div class="user-type-group">
+                        <label>
+                            <input type="radio" name="user-type" value="farmer" checked> Farmer
+                        </label>
+                        <label>
+                            <input type="radio" name="user-type" value="certifier"> Certifier
+                        </label>
+                        <label>
+                            <input type="radio" name="user-type" value="consumer"> Consumer
+                        </label>
+                    </div>
+                    <button type="submit" id="login-btn">Login</button>
+                    <p id="login-status" class="status-message"></p>
+                </form>
+                <p style="text-align:center; margin-top: 1rem;">Don't have an account? <a href="register.html">Register here</a></p>
+            </section>
+            
+            <section id="dashboard-section" class="page-section hidden">
+                <h2 id="dashboard-title"></h2>
+                <p id="dashboard-content" style="text-align:center; color: var(--color-text-dim);"></p>
+            </section>
+        </main>
+    </div>
+    
+    <script src="main.js"></script>
+</body>
+</html>
